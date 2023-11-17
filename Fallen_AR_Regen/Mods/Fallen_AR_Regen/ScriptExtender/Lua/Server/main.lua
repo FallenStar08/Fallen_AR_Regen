@@ -241,3 +241,16 @@ Ext.Osiris.RegisterListener("LeftCombat", 1, "after", function(character, combat
         UpdatePartyMembersForCombat(combatGuid)
     end
 end)
+
+
+-- -------------------------------------------------------------------------- --
+--                                   TEST                                     --
+-- -------------------------------------------------------------------------- --
+Ext.Events.ResetCompleted:Subscribe(function()
+
+    if not Config.initDone then Config.Init() end
+    if Config.GetValue(Config.config_tbl, "PER_RESOURCE_CONFIGURATION") == 1 then
+        AddResourceEntries(Config.config_tbl)
+    end
+    Files.FlushLogBuffer()
+end)
