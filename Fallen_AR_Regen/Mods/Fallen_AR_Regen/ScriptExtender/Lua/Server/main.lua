@@ -146,7 +146,7 @@ function GetPercentageForContextAndName(context, resource_name)
         return 0
     end
     local percentage = Config.GetValue(Config.config_tbl, context)
-    BasicDebug("GetPercentageForContext() - percentage : " .. percentage)
+    BasicDebug("GetPercentageForContext() - percentage : " .. (percentage or 0))
     return percentage
 end
 
@@ -185,16 +185,17 @@ end
 -- -------------------------------------------------------------------------- --
 --                                  listeners                                 --
 -- -------------------------------------------------------------------------- --
-
-
-Ext.Osiris.RegisterListener("LevelGameplayStarted", 2, "after", function(level, isEditorMode)
-    if level == "SYS_CC_I" then return end
+Ext.Events.SessionLoaded:Subscribe(function()
     if not Config.initDone then Config.Init() end
     if Config.GetValue(Config.config_tbl, "PER_RESOURCE_CONFIGURATION") == 1 then
         AddResourceEntries(Config.config_tbl)
     end
     Files.FlushLogBuffer()
 end)
+
+-- Ext.Osiris.RegisterListener("LevelGameplayStarted", 2, "after", function(level, isEditorMode)
+
+-- end)
 
 Ext.Osiris.RegisterListener("ShortRested", 1, "after", function(character)
     RestoreActionResources(character, Context.ShortRest)
