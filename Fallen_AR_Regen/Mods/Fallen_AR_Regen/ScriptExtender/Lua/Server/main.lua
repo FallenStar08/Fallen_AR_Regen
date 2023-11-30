@@ -1,46 +1,25 @@
 Ext.Require("Server/_ModInfos.lua")
 Ext.Require("Shared/_Globals.lua")
 Ext.Require("Shared/_Utils.lua")
-Ext.Require("Server/_Config.lua")
+Ext.Require("Shared/_Config.lua")
 
 
--- -------------------------------------------------------------------------- --
---                                   GLOBALS                                  --
--- -------------------------------------------------------------------------- --
-
-Context = {
+local Context = {
     ShortRest = "REGEN_SHORT_REST_PERCENTAGE",
     CombatStarted = "REGEN_COMBAT_START_PERCENTAGE",
     CombatEnded = "REGEN_COMBAT_END_PERCENTAGE",
     LeveledUp = "REGEN_LEVELUP_PERCENTAGE",
 }
--- Global table of involved characters per combat guid
-_G.CombatPartyMembers = _G.CombatPartyMembers or {}
--- Global table of decimal parts to regen later for each ressource
-_G.RestoreActionResourcesDecimalPart = _G.RestoreActionResourcesDecimalPart or {}
--- -------------------------------------------------------------------------- --
---                                General Stuff                               --
--- -------------------------------------------------------------------------- --
 
-
-function MergeSquadiesAndSummonies()
-    local mergedList = {}
-    local squadies = GetSquadies()
-    local summonies = GetSummonies()
-    for _, squady in pairs(squadies) do
-        table.insert(mergedList, squady)
-    end
-    for _, summon in pairs(summonies) do
-        table.insert(mergedList, summon)
-    end
-    BasicDebug(mergedList)
-    return mergedList
-end
+--table of involved characters per combat guid
+local CombatPartyMembers = CombatPartyMembers or {}
+--table of decimal parts to regen later for each ressource
+local RestoreActionResourcesDecimalPart = RestoreActionResourcesDecimalPart or {}
 
 -- -------------------------------------------------------------------------- --
 --                               Core functions                               --
 -- -------------------------------------------------------------------------- --
-function GetInvolvedPartyMembers(combatGuid)
+local function GetInvolvedPartyMembers(combatGuid)
     local partyMembers = {}
     local maxIndex = Osi.CombatGetInvolvedPartyMembersCount(combatGuid)
 
@@ -53,12 +32,12 @@ function GetInvolvedPartyMembers(combatGuid)
     return partyMembers
 end
 
-function UpdatePartyMembersForCombat(combatGuid)
+local function UpdatePartyMembersForCombat(combatGuid)
     local partyMembers = GetInvolvedPartyMembers(combatGuid)
-    _G.CombatPartyMembers[combatGuid] = partyMembers
+    CombatPartyMembers[combatGuid] = partyMembers
 end
 
-function GetResources(entity)
+local function GetResources(entity)
     if entity then
         local resources = entity.ActionResources.Resources
         if resources then
@@ -71,11 +50,33 @@ function GetResources(entity)
     end
 end
 
+--- Get the percentage value based on the context.
+---@param context string  The context enum (e.g., Context.ShortRest).
+---@return number percentage  The corresponding percentage (0-100).
+local function GetPercentageForContextAndName(context, resource_name)
+    if context then
+        BasicDebug(string.format(
+        "GetPercentageForContext() \n Getting percentage for resource : %s \n and context : %s", resource_name, context))
+        if CONFIG.PER_RESOURCE_CONFIGURATION == 1 then
+            local percentage = CONFIG.zREGEN[context][resource_name]
+            if percentage then
+                BasicDebug("GetPercentageForContext() - percentage : " .. percentage)
+                return percentage
+            end
+        end
+    else
+        return 0
+    end
+    local percentage = CONFIG[context]
+    BasicDebug("GetPercentageForContext() - percentage : " .. (percentage or 0))
+    return percentage
+end
+
 --- Restore action resources for a character based on the provided context.
 ---@param character string The UUID of the character.
 ---@param context string  The context enum (e.g., Context.ShortRest).
 ---@return nil
-function RestoreActionResources(character, context)
+local function RestoreActionResources(character, context)
     local entity = Ext.Entity.Get(character)
     local resources = GetResources(entity)
     if not resources then return end
@@ -96,7 +97,7 @@ function RestoreActionResources(character, context)
             -- Add the integer part to the current amount
             amount = amount + int_part
             -- Get the global decimal part for this ressource and accumulate it
-            local globalDecimalPart = _G.RestoreActionResourcesDecimalPart[UUID] or 0
+            local globalDecimalPart = RestoreActionResourcesDecimalPart[UUID] or 0
             globalDecimalPart = globalDecimalPart + decimal_part
 
             -- Check if the global decimal part is >= 1, and if so, add it to the amount
@@ -110,7 +111,7 @@ function RestoreActionResources(character, context)
             amount = math.min(amount, maxAmount)
 
             -- Update the global decimal part for this ressource
-            _G.RestoreActionResourcesDecimalPart[UUID] = globalDecimalPart
+            RestoreActionResourcesDecimalPart[UUID] = globalDecimalPart
 
             data.Amount = amount
 
@@ -128,37 +129,17 @@ function RestoreActionResources(character, context)
     end
 end
 
---- Get the percentage value based on the context.
----@param context string  The context enum (e.g., Context.ShortRest).
----@return number percentage  The corresponding percentage (0-100).
-function GetPercentageForContextAndName(context, resource_name)
-    if context then
-        BasicDebug(string.format(
-        "GetPercentageForContext() \n Getting percentage for resource : %s \n and context : %s", resource_name, context))
-        if Config.GetValue(Config.config_tbl, "PER_RESOURCE_CONFIGURATION") == 1 then
-            local percentage = Config.config_tbl.zREGEN[context][resource_name]
-            if percentage then
-                BasicDebug("GetPercentageForContext() - percentage : " .. percentage)
-                return percentage
-            end
-        end
-    else
-        return 0
-    end
-    local percentage = Config.GetValue(Config.config_tbl, context)
-    BasicDebug("GetPercentageForContext() - percentage : " .. (percentage or 0))
-    return percentage
-end
+
 
 ---@param context string  The context enum (e.g., Context.ShortRest).
-function RestoreActionResourcesForParty(context)
+local function RestoreActionResourcesForParty(context)
     local party = GetSquadies()
     for _, character in pairs(party) do
         RestoreActionResources(character, context)
     end
 end
 
-function AddResourceEntries(config)
+local function AddResourceEntries(config)
     local modified = false
     local resourceNames = {}
     for _, resource in pairs(Ext.StaticData.GetAll("ActionResource")) do
@@ -169,6 +150,7 @@ function AddResourceEntries(config)
         config.zREGEN[context] = config.zREGEN[context] or {}
         for _, resourceName in pairs(resourceNames) do
             if config.zREGEN[context][resourceName] == nil then
+                BasicDebug("Adding"..resourceName.." to the list")
                 config.zREGEN[context][resourceName] = false
                 modified = true
             end
@@ -176,7 +158,8 @@ function AddResourceEntries(config)
     end
     if modified then
         BasicDebug("AddResourceEntries() - Added new resources to the configuration file!")
-        Config.SaveConfig(Config.config_json_file_path, config)
+        BasicError(CONFIG)
+        CONFIG:save()
     else
         BasicDebug("AddResourceEntries() - No new resource(s)")
     end
@@ -186,9 +169,9 @@ end
 --                                  listeners                                 --
 -- -------------------------------------------------------------------------- --
 Ext.Events.SessionLoaded:Subscribe(function()
-    if not Config.initDone then Config.Init() end
-    if Config.GetValue(Config.config_tbl, "PER_RESOURCE_CONFIGURATION") == 1 then
-        AddResourceEntries(Config.config_tbl)
+    if not CONFIG then InitConfig() end
+    if CONFIG.PER_RESOURCE_CONFIGURATION == 1 then
+        AddResourceEntries(CONFIG)
     end
     Files.FlushLogBuffer()
 end)
@@ -212,7 +195,7 @@ Ext.Osiris.RegisterListener("CombatStarted", 1, "after", function(combat)
     if #partyMembers >= 1 then
         RestoreActionResourcesForParty(Context.CombatStarted)
         -- Store party members in the global table with the combatGuid as the key
-        _G.CombatPartyMembers[combatGuid] = partyMembers
+        CombatPartyMembers[combatGuid] = partyMembers
     else
         BasicDebug(string.format("EV_CombatStarted - No party members found for combat %s", combatGuid))
     end
@@ -220,7 +203,7 @@ end)
 
 Ext.Osiris.RegisterListener("CombatEnded", 1, "after", function(combat)
     local combatGuid = combat
-    local partyMembers = _G.CombatPartyMembers[combatGuid]
+    local partyMembers = CombatPartyMembers[combatGuid]
     if partyMembers and #partyMembers > 0 then
         -- At least one party member was still involved, restore action resources for all party members
         RestoreActionResourcesForParty(Context.CombatEnded)
@@ -249,9 +232,9 @@ end)
 -- -------------------------------------------------------------------------- --
 Ext.Events.ResetCompleted:Subscribe(function()
 
-    if not Config.initDone then Config.Init() end
-    if Config.GetValue(Config.config_tbl, "PER_RESOURCE_CONFIGURATION") == 1 then
-        AddResourceEntries(Config.config_tbl)
+    if not CONFIG then InitConfig() end
+    if CONFIG.PER_RESOURCE_CONFIGURATION == 1 then
+        AddResourceEntries(CONFIG)
     end
     Files.FlushLogBuffer()
 end)
