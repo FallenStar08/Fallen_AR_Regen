@@ -12,9 +12,9 @@ local Context = {
 }
 
 --table of involved characters per combat guid
-local CombatPartyMembers = CombatPartyMembers or {}
+local CombatPartyMembers = {}
 --table of decimal parts to regen later for each ressource
-local RestoreActionResourcesDecimalPart = RestoreActionResourcesDecimalPart or {}
+local RestoreActionResourcesDecimalPart = {}
 
 -- -------------------------------------------------------------------------- --
 --                               Core functions                               --
@@ -52,7 +52,7 @@ end
 
 --- Get the percentage value based on the context.
 ---@param context string  The context enum (e.g., Context.ShortRest).
----@return number percentage  The corresponding percentage (0-100).
+---@return number? percentage  The corresponding percentage (0-100).
 local function GetPercentageForContextAndName(context, resource_name)
     if context then
         BasicDebug(string.format(
@@ -69,7 +69,7 @@ local function GetPercentageForContextAndName(context, resource_name)
     end
     local percentage = CONFIG[context]
     BasicDebug("GetPercentageForContext() - percentage : " .. (percentage or 0))
-    return percentage
+    return tonumber(percentage) or 0
 end
 
 --- Restore action resources for a character based on the provided context.
@@ -140,6 +140,7 @@ local function RestoreActionResourcesForParty(context)
 end
 
 local function AddResourceEntries(config)
+    BasicPrint("here")
     local modified = false
     local resourceNames = {}
     for _, resource in pairs(Ext.StaticData.GetAll("ActionResource")) do
@@ -157,8 +158,8 @@ local function AddResourceEntries(config)
         end
     end
     if modified then
-        BasicDebug("AddResourceEntries() - Added new resources to the configuration file!")
-        BasicError(CONFIG)
+        BasicPrint("AddResourceEntries() - Added new resources to the configuration file!")
+        BasicDebug(CONFIG)
         CONFIG:save()
     else
         BasicDebug("AddResourceEntries() - No new resource(s)")
@@ -168,13 +169,7 @@ end
 -- -------------------------------------------------------------------------- --
 --                                  listeners                                 --
 -- -------------------------------------------------------------------------- --
-Ext.Events.SessionLoaded:Subscribe(function()
-    if not CONFIG then InitConfig() end
-    if CONFIG.PER_RESOURCE_CONFIGURATION == 1 then
-        AddResourceEntries(CONFIG)
-    end
-    Files.FlushLogBuffer()
-end)
+
 
 -- Ext.Osiris.RegisterListener("LevelGameplayStarted", 2, "after", function(level, isEditorMode)
 
@@ -230,11 +225,13 @@ end)
 -- -------------------------------------------------------------------------- --
 --                                   TEST                                     --
 -- -------------------------------------------------------------------------- --
-Ext.Events.ResetCompleted:Subscribe(function()
-
-    if not CONFIG then InitConfig() end
+local function start()
+    if not CONFIG then CONFIG=InitConfig() end
     if CONFIG.PER_RESOURCE_CONFIGURATION == 1 then
         AddResourceEntries(CONFIG)
     end
     Files.FlushLogBuffer()
-end)
+end
+
+Ext.Events.ResetCompleted:Subscribe(start)
+Ext.Events.SessionLoaded:Subscribe(start)
