@@ -1,12 +1,7 @@
--- -------------------------------------------------------------------------- --
---                               Default tables                               --
--- -------------------------------------------------------------------------- --
-
-local default_config_tbl = {
+local default_config={
     LOG_ENABLED = 0,
     MOD_ENABLED = 1,
     DEBUG_MESSAGES = 3,
-    VERSION = CurrentVersion,
     REGEN_COMBAT_START_PERCENTAGE = 0,
     REGEN_COMBAT_END_PERCENTAGE = 0,
     REGEN_SHORT_REST_PERCENTAGE = 100,
@@ -84,4 +79,4 @@ local default_config_tbl = {
     }
 }
 
-return default_config_tbl
+MOD_INFO=ModInfo:new("Fall_AR_Regen","Fall_AR_Regen",true,default_config)
