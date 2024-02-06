@@ -137,7 +137,6 @@ local function RestoreActionResourcesForParty(context)
 end
 
 local function AddResourceEntries(config)
-    BasicPrint("here")
     local modified = false
     local resourceNames = {}
     for _, resource in pairs(Ext.StaticData.GetAll("ActionResource")) do
