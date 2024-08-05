@@ -1,6 +1,3 @@
-
-
-
 local Context = {
     ShortRest = "REGEN_SHORT_REST_PERCENTAGE",
     CombatStarted = "REGEN_COMBAT_START_PERCENTAGE",
@@ -53,7 +50,8 @@ end
 local function GetPercentageForContextAndName(context, resource_name)
     if context then
         BasicDebug(string.format(
-        "GetPercentageForContext() \n Getting percentage for resource : %s \n and context : %s", resource_name, context))
+            "GetPercentageForContext() \n Getting percentage for resource : %s \n and context : %s", resource_name,
+            context))
         if CONFIG.PER_RESOURCE_CONFIGURATION == 1 then
             local percentage = CONFIG.zREGEN[context][resource_name]
             if percentage then
@@ -81,7 +79,7 @@ local function RestoreActionResources(character, context)
         for number, data in pairs(entity_data) do
             local maxAmount = data.MaxAmount
             local amount = data.Amount
-            if amount==maxAmount then
+            if amount == maxAmount then
                 goto skip
             end
             local resourceName = Ext.StaticData.Get(UUID, "ActionResource").Name
@@ -147,7 +145,7 @@ local function AddResourceEntries(config)
         config.zREGEN[context] = config.zREGEN[context] or {}
         for _, resourceName in pairs(resourceNames) do
             if config.zREGEN[context][resourceName] == nil then
-                BasicDebug("Adding"..resourceName.." to the list")
+                BasicDebug("Adding" .. resourceName .. " to the list")
                 config.zREGEN[context][resourceName] = false
                 modified = true
             end
@@ -222,11 +220,10 @@ end)
 --                                   TEST                                     --
 -- -------------------------------------------------------------------------- --
 local function start()
-    if not CONFIG then CONFIG=InitConfig() end
+    if not CONFIG then CONFIG = InitConfig() end
     if CONFIG.PER_RESOURCE_CONFIGURATION == 1 then
         AddResourceEntries(CONFIG)
     end
-    Files.FlushLogBuffer()
 end
 
 Ext.Events.ResetCompleted:Subscribe(start)
